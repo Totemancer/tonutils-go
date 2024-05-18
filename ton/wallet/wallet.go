@@ -37,8 +37,7 @@ const (
 	V3                         = V3R2
 	V4R1               Version = 41
 	V4R2               Version = 42
-	V5R1_Testnet       Version = 50
-	V5R1_Mainnet       Version = 51
+	V5R1               Version = 51
 	HighloadV2R2       Version = 122
 	HighloadV2Verified Version = 123
 	HighloadV3         Version = 300
@@ -73,7 +72,7 @@ var (
 		V2R1: _V2R1CodeHex, V2R2: _V2R2CodeHex,
 		V3R1: _V3R1CodeHex, V3R2: _V3R2CodeHex,
 		V4R1: _V4R1CodeHex, V4R2: _V4R2CodeHex,
-		V5R1_Testnet: _V5R1CodeHex, V5R1_Mainnet: _V5R1CodeHex,
+		V5R1:         _V5R1CodeHex,
 		HighloadV2R2: _HighloadV2R2CodeHex, HighloadV2Verified: _HighloadV2VerifiedCodeHex,
 		HighloadV3: _HighloadV3CodeHex,
 		Lockup:     _LockupCodeHex,
@@ -150,6 +149,11 @@ func FromPrivateKey(api TonAPI, key ed25519.PrivateKey, version VersionConfig) (
 		return nil, err
 	}
 
+	// Default SubWallet 0 only for V5R1 else 698983191
+	if version == V5R1 {
+		defaultSubwallet = 0
+	}
+
 	w := &Wallet{
 		api:       api,
 		key:       key,
@@ -168,7 +172,7 @@ func FromPrivateKey(api TonAPI, key ed25519.PrivateKey, version VersionConfig) (
 
 func getSpec(w *Wallet) (any, error) {
 	switch v := w.ver.(type) {
-	case Version:
+	case Version, ConfigV5R1:
 		regular := SpecRegular{
 			wallet:      w,
 			messagesTTL: 60 * 3, // default ttl 3 min
@@ -204,36 +208,17 @@ func getSpec(w *Wallet) (any, error) {
 			return &SpecHighloadV2R2{regular, SpecQuery{}}, nil
 		case HighloadV3:
 			return nil, fmt.Errorf("use ConfigHighloadV3 for highload v3 spec")
-		case V5R1_Testnet, V5R1_Mainnet:
-			return nil, fmt.Errorf("use ConfigWalletV5 for WalletV5 spec")
-		}
-	case ConfigWalletV5:
-		seqnoFetcher := func(ctx context.Context, subWallet uint32) (uint32, error) {
-			block, err := w.api.CurrentMasterchainInfo(ctx)
-			if err != nil {
-				return 0, fmt.Errorf("failed to get block: %w", err)
-			}
-
-			resp, err := w.api.WaitForBlock(block.SeqNo).RunGetMethod(ctx, block, w.addr, "seqno")
-			if err != nil {
-				if cErr, ok := err.(ton.ContractExecError); ok && cErr.Code == ton.ErrCodeContractNotInitialized {
-					return 0, nil
+		case V5R1:
+			return nil, fmt.Errorf("use ConfigV5R1 for v5 spec")
+		default:
+			switch x := w.ver.(type) {
+			case ConfigV5R1:
+				if x.NetworkGlobalID == 0 {
+					return nil, fmt.Errorf("NetworkGlobalID should be set in v5 config")
 				}
-				return 0, fmt.Errorf("get seqno err: %w", err)
+				return &SpecV5R1{SpecRegular: regular, SpecSeqno: SpecSeqno{seqnoFetcher: seqnoFetcher}, config: x}, nil
 			}
-
-			iSeq, err := resp.Int(0)
-			if err != nil {
-				return 0, fmt.Errorf("failed to parse seqno: %w", err)
-			}
-			return uint32(iSeq.Uint64()), nil
 		}
-
-		return &SpecWalletV5{
-			wallet:    w,
-			config:    v,
-			SpecSeqno: SpecSeqno{seqnoFetcher: seqnoFetcher}, // Specify the field name for SpecSeqno
-		}, nil
 	case ConfigHighloadV3:
 		return &SpecHighloadV3{wallet: w, config: v}, nil
 	}
@@ -333,9 +318,13 @@ func (w *Wallet) PrepareExternalMessageForMany(ctx context.Context, withStateIni
 
 	var msg *cell.Cell
 	switch v := w.ver.(type) {
-	case Version:
+	case Version, ConfigV5R1:
+		if _, ok := v.(ConfigV5R1); ok {
+			v = V5R1
+		}
+
 		switch v {
-		case V3R2, V3R1, V4R2, V4R1:
+		case V3R2, V3R1, V4R2, V4R1, V5R1:
 			msg, err = w.spec.(RegularBuilder).BuildMessage(ctx, !withStateInit, nil, messages)
 			if err != nil {
 				return nil, fmt.Errorf("build message err: %w", err)
@@ -352,11 +341,6 @@ func (w *Wallet) PrepareExternalMessageForMany(ctx context.Context, withStateIni
 		}
 	case ConfigHighloadV3:
 		msg, err = w.spec.(*SpecHighloadV3).BuildMessage(ctx, messages)
-		if err != nil {
-			return nil, fmt.Errorf("build message err: %w", err)
-		}
-	case ConfigWalletV5:
-		msg, err = w.spec.(*SpecWalletV5).BuildMessage(ctx, messages)
 		if err != nil {
 			return nil, fmt.Errorf("build message err: %w", err)
 		}
