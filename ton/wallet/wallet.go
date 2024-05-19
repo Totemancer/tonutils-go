@@ -152,6 +152,7 @@ func FromPrivateKey(api TonAPI, key ed25519.PrivateKey, version VersionConfig) (
 
 	// Tonkeeper Desktop Wallet Gen:
 	// addr, err := AddressFromPubKey(key.Public().(ed25519.PublicKey), version, 0)
+	// DefaultSubwallet need to be 0 in this function and consistently in the whole code unless Error34 with contract
 	addr, err := AddressFromPubKey(key.Public().(ed25519.PublicKey), version, DefaultSubwallet)
 	if err != nil {
 		return nil, err
@@ -162,7 +163,7 @@ func FromPrivateKey(api TonAPI, key ed25519.PrivateKey, version VersionConfig) (
 		key:       key,
 		addr:      addr,
 		ver:       version,
-		subwallet: DefaultSubwallet,
+		subwallet: DefaultSubwallet, // this need to be 0 too
 	}
 
 	w.spec, err = getSpec(w)
