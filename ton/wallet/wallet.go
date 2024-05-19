@@ -144,14 +144,17 @@ type Wallet struct {
 }
 
 func FromPrivateKey(api TonAPI, key ed25519.PrivateKey, version VersionConfig) (*Wallet, error) {
+	// Default SubWallet 0 only for V5R1 else 698983191
+	// Something simiar need to hardcode here
+	//if version == V5R1 {
+	//	defaultSubwallet = 0
+	//}
+
+	// Tonkeeper Desktop Wallet Gen:
+	// addr, err := AddressFromPubKey(key.Public().(ed25519.PublicKey), version, 0)
 	addr, err := AddressFromPubKey(key.Public().(ed25519.PublicKey), version, DefaultSubwallet)
 	if err != nil {
 		return nil, err
-	}
-
-	// Default SubWallet 0 only for V5R1 else 698983191
-	if version == V5R1 {
-		defaultSubwallet = 0
 	}
 
 	w := &Wallet{
