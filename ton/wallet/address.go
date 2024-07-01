@@ -87,13 +87,18 @@ func GetStateInit(pubKey ed25519.PublicKey, version VersionConfig, subWallet uin
 	case V5R1:
 		config := version.(ConfigV5R1)
 
+		// Create WalletId instance
+		walletId := WalletId{
+			NetworkGlobalID: config.NetworkGlobalID,
+			WorkChain:       config.Workchain,
+			SubwalletNumber: subWallet,
+			walletVersion:   0,
+		}
+
 		data = cell.BeginCell().
-			MustStoreBoolBit(false). // signature_auth_disabled (https://github.com/Skydev0h/w5/commit/1f9b0a3a19edfab4ae4d6bfd23eb0fea1e5fc181#diff-09a46711e64512185158086f7e6ece30bda4f749d144fc64baa7e9d913b960cfR27)
-			MustStoreUInt(0, 32).    // seqno (W5 Beta 33 -> W5 Final 32)
-			MustStoreInt(int64(config.NetworkGlobalID), 32).
-			MustStoreInt(int64(config.Workchain), 8).
-			MustStoreUInt(0, 8). // version of v5
-			MustStoreUInt(uint64(subWallet), 32).
+			MustStoreBoolBit(true).
+			MustStoreUInt(0, 32). // seqno
+			MustStoreUInt(walletId.Serialized(), 32).
 			MustStoreSlice(pubKey, 256).
 			MustStoreDict(nil). // empty dict of plugins
 			EndCell()
