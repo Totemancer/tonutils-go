@@ -101,7 +101,7 @@ func GetStateInit(pubKey ed25519.PublicKey, version VersionConfig, subWallet uin
 			MustStoreDict(nil). // empty dict of plugins
 			EndCell()
 	case V5Final:
-		config := version.(ConfigV5Beta)
+		config := version.(ConfigV5Final)
 
 		// Create WalletId instance
 		walletId := WalletId{
