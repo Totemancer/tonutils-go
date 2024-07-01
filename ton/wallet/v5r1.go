@@ -68,9 +68,8 @@ func (s *SpecV5R1) BuildMessage(ctx context.Context, _ bool, _ *ton.BlockIDExt, 
 		MustStoreUInt(0x7369676e, 32).                                                                    // external sign op code
 		MustStoreUInt(uint64(walletId.Serialized()), 32).                                                 // serialized WalletId
 		MustStoreUInt(uint64(time.Now().Add(time.Duration(s.messagesTTL)*time.Second).UTC().Unix()), 32). // validUntil
-		MustStoreUInt(uint64(seq), 32).                                                                   // seqno
-		MustStoreBuilder(actions).                                                                        // actions
-		MustStoreUInt(0, 1)                                                                               // end of actions
+		MustStoreUInt(uint64(seq), 32).                                                                   // seq (block)
+		MustStoreBuilder(actions)                                                                         // Action list
 
 	sign := payload.EndCell().Sign(s.wallet.key)
 	msg := cell.BeginCell().MustStoreBuilder(payload).MustStoreSlice(sign, 512).EndCell()
@@ -78,9 +77,23 @@ func (s *SpecV5R1) BuildMessage(ctx context.Context, _ bool, _ *ton.BlockIDExt, 
 	return msg, nil
 }
 
-func packV5Actions(messages []*Message) (*cell.Builder, error) {
+// Validate messages
+func validateMessageFields(messages []*Message) error {
 	if len(messages) > 255 {
-		return nil, fmt.Errorf("max 255 messages allowed for v5")
+		return fmt.Errorf("max 255 messages allowed for v5")
+	}
+	for _, message := range messages {
+		if message.InternalMessage == nil {
+			return fmt.Errorf("internal message cannot be nil")
+		}
+	}
+	return nil
+}
+
+// Pack Actions
+func packV5Actions(messages []*Message) (*cell.Builder, error) {
+	if err := validateMessageFields(messages); err != nil {
+		return nil, err
 	}
 
 	var list = cell.BeginCell().EndCell()
@@ -98,5 +111,5 @@ func packV5Actions(messages []*Message) (*cell.Builder, error) {
 	}
 
 	// Ensure the action list ends with 0, 1 as per the new specification
-	return cell.BeginCell().MustStoreRef(list).MustStoreUInt(0, 1), nil
+	return cell.BeginCell().MustStoreUInt(1, 1).MustStoreRef(list).MustStoreUInt(0, 1), nil
 }
