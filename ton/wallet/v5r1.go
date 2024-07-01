@@ -12,7 +12,7 @@ import (
 	"github.com/xssnick/tonutils-go/tvm/cell"
 )
 
-// https://github.com/tolya-yanot/w5/commit/6e81ad3d7dea3a9b18638aa9e201548ac1eb4720
+// https://github.com/tolya-yanot/w5/commit/facbfcf195e8b87ba3ee2985f94c9ff70dda41ed
 const _V5R1CodeHex = "b5ee9c724102140100028d000114ff00f4a413f4bcf2c80b0102012004020102f203012020d70b1f82107369676ebaf2e08a7f700f0201480e0502012007060019be5f0f6a2684080a0eb90fa02c0201200b080201480a090011b262fb513435c280200017b325fb51341c75c875c2c7e002016e0d0c0019af1df6a2684010eb90eb858fc00019adce76a2684020eb90eb85ffc002f2d020d749c120915b8f6e20d70b1f2082106578746ebd21821073696e74bdb0925f03e002d0d60301c713c200925f03e00282106578746eba8eb08020d72101fa4030fa44f828fa443058bd915be0ed44d0810141d721f4058307f40e6fa1319130e18040d721707fdb3ce03120d749810281b99130e07070e2100f01e48eefeda2edfb228308d722038308d723208020d721d31fd31fd31fed44d0d200d31f20d31fd3ffd70a000af90140ddf9109a29945f0bdb31e1f2c087df02b35007b0f2d0845125baf2e0855037baf2e086f823bbf2d0882392f800de01a47fc8ca00cb1f01cf16c9ed542192f80fdedb3cd81003f4eda2edfb02f404216e926c218e4d0221d73930709421c700b38e2d01d72820761e436c20d749c008f2e09320d74ac002f2e09320d71d06c712c2005230b0f2d089d74cd7393001a4e86c128100febbf2e093d74ac000f2e093ed55e2d20001c000915be0ebd72c08142091709601d72c081c12e25210b1e30f201312110014d74a935bdb31e1d74cd0007230d72c08248e2d21f2e092d200ed44d0d2005113baf2d08f54503091319c01810140d721d70a00f2e08ee2c8ca0058cf16c9ed5493f2c08de2009601fa4001fa44f828fa443058baf2e091ed44d0810141d718f405049d7fc8ca0040048307f453f2e08b8e14038307f45bf2e08c22d70a00216e01b3b0f2d090e2c85003cf1612f400c9ed542304d79e"
 
 type ConfigV5R1 struct {
@@ -34,9 +34,9 @@ type WalletId struct {
 	walletVersion   uint8
 }
 
-func (w WalletId) Serialized() uint64 {
-	// Serialize WalletId into a 64-bit integer
-	return uint64(w.NetworkGlobalID)<<32 | uint64(uint32(w.WorkChain)<<24) | uint64(w.SubwalletNumber) | uint64(w.walletVersion)
+func (w WalletId) Serialized() uint32 {
+	// Serialize WalletId into a 32-bit integer
+	return uint32(w.NetworkGlobalID)<<24 | uint32(w.WorkChain)<<16 | w.SubwalletNumber
 }
 
 const MainnetGlobalID = -239
@@ -44,7 +44,7 @@ const TestnetGlobalID = -3
 
 func (s *SpecV5R1) BuildMessage(ctx context.Context, _ bool, _ *ton.BlockIDExt, messages []*Message) (_ *cell.Cell, err error) {
 	if len(messages) > 255 {
-		return nil, errors.New("for this type of wallet max 4 messages can be sent in the same time")
+		return nil, errors.New("for this type of wallet max 255 messages can be sent at the same time")
 	}
 
 	seq, err := s.seqnoFetcher(ctx, s.wallet.subwallet)
@@ -57,7 +57,6 @@ func (s *SpecV5R1) BuildMessage(ctx context.Context, _ bool, _ *ton.BlockIDExt, 
 		return nil, fmt.Errorf("failed to build actions: %w", err)
 	}
 
-	// Create WalletId instance
 	walletId := WalletId{
 		NetworkGlobalID: s.config.NetworkGlobalID,
 		WorkChain:       s.config.Workchain,
@@ -67,23 +66,11 @@ func (s *SpecV5R1) BuildMessage(ctx context.Context, _ bool, _ *ton.BlockIDExt, 
 
 	payload := cell.BeginCell().
 		MustStoreUInt(0x7369676e, 32).                                                                    // external sign op code
-		MustStoreUInt(walletId.Serialized(), 32).                                                         // serialized WalletId
+		MustStoreUInt(uint64(walletId.Serialized()), 32).                                                 // serialized WalletId
 		MustStoreUInt(uint64(time.Now().Add(time.Duration(s.messagesTTL)*time.Second).UTC().Unix()), 32). // validUntil
 		MustStoreUInt(uint64(seq), 32).                                                                   // seqno
 		MustStoreBuilder(actions).                                                                        // actions
-		MustStoreUInt(0, 1)                                                                               // say there is no more ?
-
-		/*
-			payload := cell.BeginCell().
-				MustStoreUInt(0x7369676e, 32). // external sign op code
-				MustStoreInt(int64(s.config.NetworkGlobalID), 32).
-				MustStoreInt(int64(s.config.Workchain), 8).
-				MustStoreUInt(0, 8). // version of v5
-				MustStoreUInt(uint64(s.wallet.subwallet), 32).
-				MustStoreUInt(uint64(timeNow().Add(time.Duration(s.messagesTTL)*time.Second).UTC().Unix()), 32).
-				MustStoreUInt(uint64(seq), 32).
-				MustStoreBuilder(actions)
-		*/
+		MustStoreUInt(0, 1)                                                                               // end of actions
 
 	sign := payload.EndCell().Sign(s.wallet.key)
 	msg := cell.BeginCell().MustStoreBuilder(payload).MustStoreSlice(sign, 512).EndCell()
@@ -103,12 +90,13 @@ func packV5Actions(messages []*Message) (*cell.Builder, error) {
 			return nil, err
 		}
 
-		msg := cell.BeginCell().MustStoreUInt(0x0ec3c86d, 32).
-			MustStoreUInt(uint64(message.Mode), 8).
-			MustStoreRef(outMsg)
+		msg := cell.BeginCell().MustStoreUInt(0x0ec3c86d, 32). // action_send_msg prefix
+									MustStoreUInt(uint64(message.Mode), 8). // mode
+									MustStoreRef(outMsg)                    // message reference
 
 		list = cell.BeginCell().MustStoreRef(list).MustStoreBuilder(msg).EndCell()
 	}
 
+	// Ensure the action list ends with 0, 1 as per the new specification
 	return cell.BeginCell().MustStoreRef(list).MustStoreUInt(0, 1), nil
 }

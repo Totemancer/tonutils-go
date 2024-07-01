@@ -97,8 +97,8 @@ func GetStateInit(pubKey ed25519.PublicKey, version VersionConfig, subWallet uin
 
 		data = cell.BeginCell().
 			MustStoreBoolBit(true).
-			MustStoreUInt(0, 32). // seqno
-			MustStoreUInt(walletId.Serialized(), 32).
+			MustStoreUInt(0, 32).                             // seqno
+			MustStoreUInt(uint64(walletId.Serialized()), 32). // serialize
 			MustStoreSlice(pubKey, 256).
 			MustStoreDict(nil). // empty dict of plugins
 			EndCell()
