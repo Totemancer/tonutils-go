@@ -27,9 +27,6 @@ type SpecV5Beta struct {
 	config ConfigV5Beta
 }
 
-const MainnetGlobalID = -239
-const TestnetGlobalID = -3
-
 func (s *SpecV5Beta) BuildMessage(ctx context.Context, _ bool, _ *ton.BlockIDExt, messages []*Message) (_ *cell.Cell, err error) {
 	// TODO: remove block, now it is here for backwards compatibility
 
@@ -42,7 +39,7 @@ func (s *SpecV5Beta) BuildMessage(ctx context.Context, _ bool, _ *ton.BlockIDExt
 		return nil, fmt.Errorf("failed to fetch seqno: %w", err)
 	}
 
-	actions, err := packV5Actions(messages)
+	actions, err := packV5BetaActions(messages)
 	if err != nil {
 		return nil, fmt.Errorf("failed to build actions: %w", err)
 	}
@@ -63,7 +60,7 @@ func (s *SpecV5Beta) BuildMessage(ctx context.Context, _ bool, _ *ton.BlockIDExt
 	return msg, nil
 }
 
-func packV5Actions(messages []*Message) (*cell.Builder, error) {
+func packV5BetaActions(messages []*Message) (*cell.Builder, error) {
 	if len(messages) > 255 {
 		return nil, fmt.Errorf("max 255 messages allowed for v5")
 	}

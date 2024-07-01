@@ -26,6 +26,10 @@ import (
 
 type Version int
 
+// Network IDs
+const MainnetGlobalID = -239
+const TestnetGlobalID = -3
+
 const (
 	V1R1               Version = 11
 	V1R2               Version = 12
@@ -214,11 +218,16 @@ func getSpec(w *Wallet) (any, error) {
 		}
 
 		switch x := w.ver.(type) {
-		case ConfigV5Beta, ConfigV5Final:
+		case ConfigV5Beta:
 			if x.NetworkGlobalID == 0 {
-				return nil, fmt.Errorf("NetworkGlobalID should be set in v5 config")
+				return nil, fmt.Errorf("NetworkGlobalID should be set in V5B config")
 			}
 			return &SpecV5Beta{SpecRegular: regular, SpecSeqno: SpecSeqno{seqnoFetcher: seqnoFetcher}, config: x}, nil
+		case ConfigV5Final:
+			if x.NetworkGlobalID == 0 {
+				return nil, fmt.Errorf("NetworkGlobalID should be set in V5F config")
+			}
+			return &SpecV5Final{SpecRegular: regular, SpecSeqno: SpecSeqno{seqnoFetcher: seqnoFetcher}, config: x}, nil
 		}
 
 		switch v {
