@@ -47,7 +47,7 @@ func (w WalletId) serializeContext() uint32 {
 	builder := NewCellBuilder()
 	builder.MustStoreBoolBit(true)                       // storeUint(1, 1)
 	builder.MustStoreUInt(uint64(w.WorkChain), 8)        // storeInt(walletId.context.workChain, 8)
-	builder.MustStoreUInt(uint64(w.WalletVersion), 8)    // storeUint(walletV5R1VersionsSerialisation[walletId.context.walletVersion], 8)
+	builder.MustStoreUInt(uint64(w.WalletVersion), 8)    // storeUint(walletV5BetaVersionsSerialisation[walletId.context.walletVersion], 8)
 	builder.MustStoreUInt(uint64(w.SubwalletNumber), 15) // storeUint(walletId.context.subwalletNumber, 15)
 	serializedContext := builder.EndCell()
 	return binary.BigEndian.Uint32(serializedContext[:4]) // Serialize to a 32-bit integer

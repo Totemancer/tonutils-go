@@ -92,16 +92,16 @@ func GetStateInit(pubKey ed25519.PublicKey, version VersionConfig, subWallet uin
 		config := version.(ConfigV5Beta)
 
 		data = cell.BeginCell().
-			MustStoreUInt(0, 33). // seqno
-			MustStoreInt(int64(config.NetworkGlobalID), 32).
-			MustStoreInt(int64(config.Workchain), 8).
-			MustStoreUInt(0, 8). // version of v5
-			MustStoreUInt(uint64(subWallet), 32).
+			MustStoreUInt(0, 33).                            // seqno
+			MustStoreInt(int64(config.NetworkGlobalID), 32). // network id
+			MustStoreInt(int64(config.Workchain), 8).        // workchain
+			MustStoreUInt(0, 8).                             // version of v5
+			MustStoreUInt(uint64(subWallet), 32).            // default 0
 			MustStoreSlice(pubKey, 256).
 			MustStoreDict(nil). // empty dict of plugins
 			EndCell()
 	case V5R1:
-		config := version.(ConfigV5R2)
+		config := version.(ConfigV5R1)
 
 		// Create WalletId instance
 		walletId := WalletId{
