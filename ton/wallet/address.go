@@ -105,10 +105,10 @@ func GetStateInit(pubKey ed25519.PublicKey, version VersionConfig, subWallet uin
 
 		// Create WalletId instance
 		walletId := WalletId{
-			NetworkGlobalID: config.NetworkGlobalID,
+			NetworkGlobalID: config.NetworkGlobalID, // -3 Testnet, -239 Mainnet
 			WorkChain:       config.Workchain,
-			SubwalletNumber: subWallet,
-			WalletVersion:   0,
+			SubwalletNumber: uint16(subWallet),
+			WalletVersion:   0, // Wallet Version
 		}
 
 		data = cell.BeginCell().
