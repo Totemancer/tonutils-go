@@ -42,7 +42,7 @@ const (
 	V4R1               Version = 41
 	V4R2               Version = 42
 	V5Beta             Version = 51 // W5 Beta
-	V5R1               Version = 52 // W5 Final (V5Beta)
+	V5R1               Version = 52 // W5 Final
 	HighloadV2R2       Version = 122
 	HighloadV2Verified Version = 123
 	HighloadV3         Version = 300
