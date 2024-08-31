@@ -3,6 +3,7 @@
 <img align="right" width="425px" src="https://github.com/xssnick/props/blob/master/logoimg.png?raw=true">
 
 [![Based on TON][ton-svg]][ton]
+[![Telegram Channel][tgc-svg]][tg-channel]
 ![Coverage](https://img.shields.io/badge/Coverage-73.8%25-brightgreen)
 
 Golang library for interacting with TON blockchain.
@@ -63,12 +64,13 @@ If you love this library and want to support its development you can donate any 
 
 You can find usage examples in **[example](https://github.com/xssnick/tonutils-go/tree/master/example)** directory
 
-You can also join our **[Telegram group](https://t.me/tonutils)** and ask any questions :)
+You could also join our **[Telegram channel](https://t.me/tonutilsnews)** and **[group](https://t.me/tonutils)**, feel free ask any questions :)
 
 ### Connection
-You can get list of public lite servers from official TON configs:
-* Mainnet - `https://ton.org/global.config.json`
-* Testnet - `https://ton-blockchain.github.io/testnet-global.config.json`
+You can use liteservers from TON configs:
+* Mainnet public servers - `https://ton.org/global.config.json`
+* Testnet public servers - `https://ton-blockchain.github.io/testnet-global.config.json`
+* Mainnet servers by Tonutils - `https://tonutils.com/ls/free-mainnet-config.json`
 
 from liteservers section, you need to convert int to ip and take port and key.
 
@@ -505,5 +507,8 @@ client.SetOnDisconnect(func(addr, serverKey string) {
 
 <!-- Badges -->
 [ton-svg]: https://img.shields.io/badge/Based%20on-TON-blue
+[tgc-svg]: https://img.shields.io/badge/Telegram%20-Subscribe-24A1DE
+[tgg-svg]: https://img.shields.io/badge/Telegram%20-Group-blue
 [ton]: https://ton.org
 [tg-chat]: https://t.me/tonutils
+[tg-channel]: https://t.me/tonutilsnews
